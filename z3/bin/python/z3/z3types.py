@@ -16,108 +16,135 @@ class Z3Exception(Exception):
 
 class ContextObj(ctypes.c_void_p):
   def __init__(self, context): self._as_parameter_ = context
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class Config(ctypes.c_void_p):
   def __init__(self, config): self._as_parameter_ = config
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class Symbol(ctypes.c_void_p):
   def __init__(self, symbol): self._as_parameter_ = symbol
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class Sort(ctypes.c_void_p):
   def __init__(self, sort): self._as_parameter_ = sort
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class FuncDecl(ctypes.c_void_p):
   def __init__(self, decl): self._as_parameter_ = decl
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class Ast(ctypes.c_void_p):
   def __init__(self, ast): self._as_parameter_ = ast
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class Pattern(ctypes.c_void_p):
   def __init__(self, pattern): self._as_parameter_ = pattern
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class Model(ctypes.c_void_p):
   def __init__(self, model): self._as_parameter_ = model
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class Literals(ctypes.c_void_p):
   def __init__(self, literals): self._as_parameter_ = literals
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class Constructor(ctypes.c_void_p):
   def __init__(self, constructor): self._as_parameter_ = constructor
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class ConstructorList(ctypes.c_void_p):
   def __init__(self, constructor_list): self._as_parameter_ = constructor_list
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class GoalObj(ctypes.c_void_p):
   def __init__(self, goal): self._as_parameter_ = goal
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class TacticObj(ctypes.c_void_p):
   def __init__(self, tactic): self._as_parameter_ = tactic
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class ProbeObj(ctypes.c_void_p):
   def __init__(self, probe): self._as_parameter_ = probe
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class ApplyResultObj(ctypes.c_void_p):
   def __init__(self, obj): self._as_parameter_ = obj
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class StatsObj(ctypes.c_void_p):
   def __init__(self, statistics): self._as_parameter_ = statistics
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class SolverObj(ctypes.c_void_p):
   def __init__(self, solver): self._as_parameter_ = solver
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class FixedpointObj(ctypes.c_void_p):
   def __init__(self, fixedpoint): self._as_parameter_ = fixedpoint
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class OptimizeObj(ctypes.c_void_p):
   def __init__(self, optimize): self._as_parameter_ = optimize
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class ModelObj(ctypes.c_void_p):
   def __init__(self, model): self._as_parameter_ = model
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class AstVectorObj(ctypes.c_void_p):
   def __init__(self, vector): self._as_parameter_ = vector
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class AstMapObj(ctypes.c_void_p):
   def __init__(self, ast_map): self._as_parameter_ = ast_map
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class Params(ctypes.c_void_p):
   def __init__(self, params): self._as_parameter_ = params
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class ParamDescrs(ctypes.c_void_p):
   def __init__(self, paramdescrs): self._as_parameter_ = paramdescrs
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class FuncInterpObj(ctypes.c_void_p):
   def __init__(self, f): self._as_parameter_ = f
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class FuncEntryObj(ctypes.c_void_p):
   def __init__(self, e): self._as_parameter_ = e
-  def from_param(obj): return obj
+  def from_param(self):
+      return self
 
 class RCFNumObj(ctypes.c_void_p):
   def __init__(self, e): self._as_parameter_ = e
-  def from_param(obj): return obj
+  def from_param(self):
+      return self

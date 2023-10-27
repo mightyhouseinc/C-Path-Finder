@@ -15,10 +15,7 @@ from .z3printer import *
 from fractions import Fraction
 
 def _to_rcfnum(num, ctx=None):
-    if isinstance(num, RCFNum):
-        return num
-    else:
-        return RCFNum(num, ctx)
+    return num if isinstance(num, RCFNum) else RCFNum(num, ctx)
 
 def Pi(ctx=None):
     ctx = z3._get_ctx(ctx)
@@ -37,18 +34,15 @@ def MkInfinitesimal(name="eps", ctx=None):
 def MkRoots(p, ctx=None):
     ctx = z3._get_ctx(ctx)
     num = len(p)
-    _tmp = [] 
+    _tmp = []
     _as  = (RCFNumObj * num)()
-    _rs  = (RCFNumObj * num)() 
+    _rs  = (RCFNumObj * num)()
     for i in range(num):
         _a = _to_rcfnum(p[i], ctx)
         _tmp.append(_a) # prevent GC
         _as[i] = _a.num
     nr = Z3_rcf_mk_roots(ctx.ref(), num, _as, _rs)
-    r  = []
-    for i in range(nr):
-        r.append(RCFNum(_rs[i], ctx))
-    return r
+    return [RCFNum(_rs[i], ctx) for i in range(nr)]
 
 class RCFNum:
     def __init__(self, num, ctx=None):
