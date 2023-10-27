@@ -36,7 +36,7 @@ for d in _all_dirs:
   try:
     d = os.path.realpath(d)
     if os.path.isdir(d):
-      d = os.path.join(d, 'libz3.%s' % _ext)
+      d = os.path.join(d, f'libz3.{_ext}')
       if os.path.isfile(d):
         _lib = ctypes.CDLL(d)
         break
@@ -46,31 +46,32 @@ for d in _all_dirs:
 if _lib is None:
   # If all else failed, ask the system to find it.
   try:
-    _lib = ctypes.CDLL('libz3.%s' % _ext)
+    _lib = ctypes.CDLL(f'libz3.{_ext}')
   except:
     pass
 
 if _lib is None:
-  print("Could not find libz3.%s; consider adding the directory containing it to" % _ext)
+  print(
+      f"Could not find libz3.{_ext}; consider adding the directory containing it to"
+  )
   print("  - your system's PATH environment variable,")
   print("  - the Z3_LIBRARY_PATH environment variable, or ")
   print("  - to the custom Z3_LIBRARY_DIRS Python-builtin before importing the z3 module, e.g. via")
   if sys.version < '3':
     print("    import __builtin__")
-    print("    __builtin__.Z3_LIB_DIRS = [ '/path/to/libz3.%s' ] " % _ext)
+    print(f"    __builtin__.Z3_LIB_DIRS = [ '/path/to/libz3.{_ext}' ] ")
   else:
     print("    import builtins")
-    print("    builtins.Z3_LIB_DIRS = [ '/path/to/libz3.%s' ] " % _ext)
-  raise Z3Exception("libz3.%s not found." % _ext)
+    print(f"    builtins.Z3_LIB_DIRS = [ '/path/to/libz3.{_ext}' ] ")
+  raise Z3Exception(f"libz3.{_ext} not found.")
 
 def _to_ascii(s):
-  if isinstance(s, str):
-    try: 
-      return s.encode('ascii')
-    except:
-      # kick the bucket down the road.  :-J
-      return s
-  else:
+  if not isinstance(s, str):
+    return s
+  try: 
+    return s.encode('ascii')
+  except:
+    # kick the bucket down the road.  :-J
     return s
 
 if sys.version < '3':
@@ -78,12 +79,10 @@ if sys.version < '3':
      return s
 else:
   def _to_pystr(s):
-     if s != None:
-        enc = sys.stdout.encoding
-        if enc != None: return s.decode(enc)
-        else: return s.decode('ascii')
-     else:
-        return ""
+    if s is None:
+      return ""
+    enc = sys.stdout.encoding
+    return s.decode(enc) if enc != None else s.decode('ascii')
 
 _error_handler_type  = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_uint)
 

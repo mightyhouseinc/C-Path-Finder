@@ -30,7 +30,7 @@ def vset(seq, idfun=None, as_list=True):
             if s not in d_:
                 d_[s] = None
                 yield s
- 
+
     def _uniq_idfun(seq,idfun):
         d_ = {}
         for s in seq:
@@ -38,12 +38,8 @@ def vset(seq, idfun=None, as_list=True):
             if h_ not in d_:
                 d_[h_] = None
                 yield s
- 
-    if idfun is None:
-        res = _uniq_normal(seq)
-    else: 
-        res = _uniq_idfun(seq,idfun)
- 
+
+    res = _uniq_normal(seq) if idfun is None else _uniq_idfun(seq,idfun)
     return list(res) if as_list else res 
 
 
@@ -54,10 +50,7 @@ def get_z3_version(as_str=False):
     rev   = ctypes.c_uint(0)
     Z3_get_version(major,minor,build,rev)
     rs = map(int,(major.value,minor.value,build.value,rev.value))
-    if as_str:
-        return "{}.{}.{}.{}".format(*rs)
-    else:
-        return rs
+    return "{}.{}.{}.{}".format(*rs) if as_str else rs
 
 
 def ehash(v):
@@ -78,7 +71,7 @@ def ehash(v):
     if __debug__:
         assert is_expr(v)
 
-    return "{}_{}_{}".format(str(v),v.hash(),v.sort_kind())
+    return f"{str(v)}_{v.hash()}_{v.sort_kind()}"
 
 
 """
@@ -152,16 +145,11 @@ def get_vars(f,rs=[]):
         assert is_expr(f)
 
     if is_const(f):
-        if is_expr_val(f):
-            return rs
-        else:  #variable
-            return vset(rs + [f],str)
+        return rs if is_expr_val(f) else vset(rs + [f],str)
+    for f_ in f.children():
+        rs = get_vars(f_,rs)
 
-    else:
-        for f_ in f.children():
-            rs = get_vars(f_,rs)
-
-        return vset(rs,str)
+    return vset(rs,str)
 
 
 
@@ -264,15 +252,12 @@ def prove(claim,assume=None,verbose=0):
         print('E: cannot solve !')
         return None, None
     elif models == False: #unsat
-        return True,None   
+        return True,None
     else: #sat
         if __debug__:
             assert isinstance(models,list)
 
-        if models:
-            return False, models[0] #the first counterexample
-        else:
-            return False, []  #infinite counterexample,models
+        return (False, models[0]) if models else (False, [])
         
 
 def get_models(f,k):
@@ -315,7 +300,7 @@ def get_models(f,k):
     if __debug__:
         assert is_expr(f)
         assert k>=1
-    
+
 
 
     s = Solver()
@@ -324,7 +309,7 @@ def get_models(f,k):
     models = []
     i = 0
     while s.check() == sat and i < k:
-        i = i + 1
+        i += 1
 
         m = s.model()
 
@@ -338,7 +323,7 @@ def get_models(f,k):
         block = Not(And([v() == m[v] for v in m]))
         s.add(block)
 
-    
+
     if s.check() == unknown:
         return None
     elif s.check() == unsat and i==0:
@@ -410,10 +395,7 @@ def exact_one_model(f):
     """
 
     models = get_models(f,k=2)
-    if isinstance(models,list):
-        return len(models)==1
-    else:
-        return False
+    return len(models)==1 if isinstance(models,list) else False
         
     
 
@@ -449,27 +431,24 @@ def myBinOp(op,*L):
     """
 
     if __debug__:
-        assert op == Z3_OP_OR or op == Z3_OP_AND or op == Z3_OP_IMPLIES
-    
-    if len(L)==1 and (isinstance(L[0],list) or isinstance(L[0],tuple)):
+        assert op in [Z3_OP_OR, Z3_OP_AND, Z3_OP_IMPLIES]
+
+    if len(L) == 1 and (isinstance(L[0], (list, tuple))):
         L = L[0]
 
     if __debug__:
         assert all(not isinstance(l,bool) for l in L)
 
-    L = [l for l in L if is_expr(l)]
-    if L:
-        if len(L)==1:
-            return L[0]
-        else:
-            if op ==  Z3_OP_OR:
-                return Or(L)
-            elif op == Z3_OP_AND:
-                return And(L)
-            else:   #IMPLIES
-                return Implies(L[0],L[1])
-    else:
+    if not (L := [l for l in L if is_expr(l)]):
         return None
+    if len(L)==1:
+        return L[0]
+    if op ==  Z3_OP_OR:
+        return Or(L)
+    elif op == Z3_OP_AND:
+        return And(L)
+    else:   #IMPLIES
+        return Implies(L[0],L[1])
 
 
 def myAnd(*L): return myBinOp(Z3_OP_AND,*L)
@@ -496,13 +475,9 @@ def model_str(m,as_str=True):
     if __debug__:
         assert m is None or m == [] or isinstance(m,ModelRef)
 
-    if m :
-        vs = [(v,m[v]) for v in m]
-        vs = sorted(vs,key=lambda a,_: str(a))
-        if as_str:
-            return '\n'.join(['{} = {}'.format(k,v) for (k,v) in vs])
-        else:
-            return vs
-    else:
+    if not m:
         return str(m) if as_str else m
+    vs = [(v,m[v]) for v in m]
+    vs = sorted(vs,key=lambda a,_: str(a))
+    return '\n'.join([f'{k} = {v}' for (k,v) in vs]) if as_str else vs
 

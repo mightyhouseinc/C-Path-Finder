@@ -110,7 +110,15 @@ _z3_fpa_infix = [
 ]
 
 def _is_assoc(k):
-    return k == Z3_OP_BOR or k == Z3_OP_BXOR or k == Z3_OP_BAND or k == Z3_OP_ADD or k == Z3_OP_BADD or k == Z3_OP_MUL or k == Z3_OP_BMUL
+    return k in [
+        Z3_OP_BOR,
+        Z3_OP_BXOR,
+        Z3_OP_BAND,
+        Z3_OP_ADD,
+        Z3_OP_BADD,
+        Z3_OP_MUL,
+        Z3_OP_BMUL,
+    ]
 
 def _is_left_assoc(k):
     return _is_assoc(k) or k == Z3_OP_SUB or k == Z3_OP_BSUB
@@ -122,10 +130,10 @@ def _is_html_left_assoc(k):
     return _is_html_assoc(k) or k == Z3_OP_SUB or k == Z3_OP_BSUB
 
 def _is_add(k):
-    return k == Z3_OP_ADD or k == Z3_OP_BADD
+    return k in [Z3_OP_ADD, Z3_OP_BADD]
 
 def _is_sub(k):
-    return k == Z3_OP_SUB or k == Z3_OP_BSUB
+    return k in [Z3_OP_SUB, Z3_OP_BSUB]
 
 import sys
 if sys.version < '3':
@@ -181,19 +189,11 @@ _z3_pre_html_precedence = { Z3_OP_BUDIV : 2, Z3_OP_BUREM : 2,
 ##############################
 
 def _support_pp(a):
-    return isinstance(a, z3.Z3PPObject) or isinstance(a, list) or isinstance(a, tuple)
+    return isinstance(a, (z3.Z3PPObject, list, tuple))
 
-_infix_map = {}
-_unary_map = {}
-_infix_compact_map = {}
-
-for _k in _z3_infix:
-    _infix_map[_k] = True
-for _k in _z3_unary:
-    _unary_map[_k] = True
-    
-for _k in _z3_infix_compact:
-    _infix_compact_map[_k] = True
+_infix_map = {_k: True for _k in _z3_infix}
+_unary_map = {_k: True for _k in _z3_unary}
+_infix_compact_map = {_k: True for _k in _z3_infix_compact}
 
 def _is_infix(k):
     global _infix_map
@@ -208,16 +208,10 @@ def _is_unary(k):
     return _unary_map.get(k, False)
 
 def _op_name(a):
-    if isinstance(a, z3.FuncDeclRef):
-        f = a
-    else:
-        f = a.decl()
+    f = a if isinstance(a, z3.FuncDeclRef) else a.decl()
     k = f.kind()
     n = _z3_op_to_str.get(k, None)
-    if n == None:
-        return f.name()
-    else:
-        return n
+    return f.name() if n is None else n
 
 def _get_precedence(k):
     global _z3_precedence
@@ -239,14 +233,10 @@ for _k in _z3_pre_html_precedence:
     _v = _z3_pre_html_precedence[_k]
     _z3_html_precedence[_k] = _v
 
-_html_infix_map = {}
-_html_unary_map = {}
-for _k in _z3_infix:
-    _html_infix_map[_k] = True
+_html_infix_map = {_k: True for _k in _z3_infix}
 for _k in _z3_html_infix:
     _html_infix_map[_k] = True
-for _k in _z3_unary:
-    _html_unary_map[_k] = True
+_html_unary_map = {_k: True for _k in _z3_unary}
 for _k in _z3_html_unary:
     _html_unary_map[_k] = True
 
@@ -260,21 +250,17 @@ def _is_html_unary(k):
 
 def _html_op_name(a):
     global _z3_html_op_to_str
-    if isinstance(a, z3.FuncDeclRef):
-        f = a
-    else:
-        f = a.decl()
+    f = a if isinstance(a, z3.FuncDeclRef) else a.decl()
     k = f.kind()
     n = _z3_html_op_to_str.get(k, None)
-    if n == None:
-        sym = Z3_get_decl_name(f.ctx_ref(), f.ast)
-        if Z3_get_symbol_kind(f.ctx_ref(), sym) == Z3_INT_SYMBOL:
-            return "&#950;<sub>%s</sub>" % Z3_get_symbol_int(f.ctx_ref(), sym)
-        else:
-            # Sanitize the string
-            return f.name()
-    else:
+    if n is not None:
         return n
+    sym = Z3_get_decl_name(f.ctx_ref(), f.ast)
+    return (
+        f"&#950;<sub>{Z3_get_symbol_int(f.ctx_ref(), sym)}</sub>"
+        if Z3_get_symbol_kind(f.ctx_ref(), sym) == Z3_INT_SYMBOL
+        else f.name()
+    )
 
 def _get_html_precedence(k):
     global _z3_html_predence
@@ -304,13 +290,13 @@ class FormatObject:
 
 class NAryFormatObject(FormatObject):
     def __init__(self, fs):
-        assert all([isinstance(a, FormatObject) for a in fs])
+        assert all(isinstance(a, FormatObject) for a in fs)
         self.children = fs
     def children(self):
         return self.children
 
 class ComposeFormatObject(NAryFormatObject):
-    def is_compose(sef):
+    def is_compose(self):
         return True
     def as_tuple(self):
         return ('compose', [ a.as_tuple() for a in self.children ])
@@ -326,7 +312,7 @@ class ComposeFormatObject(NAryFormatObject):
         return compose([a.flat() for a in self.children ])
 
 class ChoiceFormatObject(NAryFormatObject):
-    def is_choice(sef):
+    def is_choice(self):
         return True
     def as_tuple(self):
         return ('choice', [ a.as_tuple() for a in self.children ])
@@ -381,14 +367,13 @@ def fits(f, space_left):
 def to_format(arg, size=None):
     if isinstance(arg, FormatObject):
         return arg
-    else:
-        r = StringFormatObject(str(arg))
-        if size != None:
-            r.size = size
-        return r
+    r = StringFormatObject(str(arg))
+    if size != None:
+        r.size = size
+    return r
 
 def compose(*args):
-    if len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], tuple)):
+    if len(args) == 1 and (isinstance(args[0], (list, tuple))):
         args = args[0]
     return ComposeFormatObject(args)
 
@@ -411,13 +396,10 @@ def seq(args, sep=',', space=True):
     nl = line_break()
     if not space:
         nl.space = ''
-    r = []
-    r.append(args[0])
+    r = [args[0]]
     num  = len(args)
     for i in range(num - 1):
-        r.append(to_format(sep))
-        r.append(nl)
-        r.append(args[i+1])
+        r.extend((to_format(sep), nl, args[i+1]))
     return compose(r)
 
 def seq1(header, args, lp='(', rp=')'):
@@ -478,7 +460,7 @@ class PP:
         self.line = self.line + 1
         if self.line < self.max_lines: 
             self.out.write(u('\n'))
-            for i in range(indent):
+            for _ in range(indent):
                 self.out.write(u(' '))
         else:
             self.out.write(u('\n...'))
@@ -597,71 +579,71 @@ class Formatter:
         if not self.fpa_pretty:
             r = []
             if (a.isNaN()):
-                r.append(to_format(_z3_op_to_fpa_normal_str[Z3_OP_FPA_NAN]))
-                r.append(to_format('('))
-                r.append(to_format(a.sort()))
-                r.append(to_format(')'))
+                r.extend(
+                    (
+                        to_format(_z3_op_to_fpa_normal_str[Z3_OP_FPA_NAN]),
+                        to_format('('),
+                        to_format(a.sort()),
+                        to_format(')'),
+                    )
+                )
                 return compose(r)
             elif (a.isInf()):
                 if (a.isNegative()):
                     r.append(to_format(_z3_op_to_fpa_normal_str[Z3_OP_FPA_MINUS_INF]))
                 else:
-                    r.append(to_format(_z3_op_to_fpa_normal_str[Z3_OP_FPA_PLUS_INF]))                
-                r.append(to_format('('))
-                r.append(to_format(a.sort()))
-                r.append(to_format(')'))
+                    r.append(to_format(_z3_op_to_fpa_normal_str[Z3_OP_FPA_PLUS_INF]))
+                r.extend((to_format('('), to_format(a.sort()), to_format(')')))
                 return compose(r)
 
             elif (a.isZero()):
-                if (a.isNegative()):
-                    return to_format('-zero')
-                else:
-                    return to_format('+zero')
+                return to_format('-zero') if (a.isNegative()) else to_format('+zero')
             else:
                 _z3_assert(z3.is_fp_value(a), 'expecting FP num ast')
-                r = []
                 sgn = c_int(0)
                 sgnb = Z3_fpa_get_numeral_sign(a.ctx_ref(), a.ast, byref(sgn))
                 exp = Z3_fpa_get_numeral_exponent_string(a.ctx_ref(), a.ast, False)
                 sig = Z3_fpa_get_numeral_significand_string(a.ctx_ref(), a.ast)
-                r.append(to_format('FPVal('))
+                r = [to_format('FPVal(')]
                 if sgnb and sgn.value != 0:
                     r.append(to_format('-'))
-                r.append(to_format(sig))
-                r.append(to_format('*(2**'))
-                r.append(to_format(exp))
-                r.append(to_format(', '))
-                r.append(to_format(a.sort()))
-                r.append(to_format('))'))
+                r.extend(
+                    (
+                        to_format(sig),
+                        to_format('*(2**'),
+                        to_format(exp),
+                        to_format(', '),
+                        to_format(a.sort()),
+                        to_format('))'),
+                    )
+                )
                 return compose(r)
-        else:
-            if (a.isNaN()):
-                return to_format(_z3_op_to_fpa_pretty_str[Z3_OP_FPA_NAN])
-            elif (a.isInf()):
-                if (a.isNegative()):
-                    return to_format(_z3_op_to_fpa_pretty_str[Z3_OP_FPA_MINUS_INF])
-                else:
-                    return to_format(_z3_op_to_fpa_pretty_str[Z3_OP_FPA_PLUS_INF])
-            elif (a.isZero()):
-                if (a.isNegative()):
-                    return to_format(_z3_op_to_fpa_pretty_str[Z3_OP_FPA_MINUS_ZERO])
-                else:
-                    return to_format(_z3_op_to_fpa_pretty_str[Z3_OP_FPA_PLUS_ZERO])
+        elif (a.isNaN()):
+            return to_format(_z3_op_to_fpa_pretty_str[Z3_OP_FPA_NAN])
+        elif (a.isInf()):
+            return (
+                to_format(_z3_op_to_fpa_pretty_str[Z3_OP_FPA_MINUS_INF])
+                if (a.isNegative())
+                else to_format(_z3_op_to_fpa_pretty_str[Z3_OP_FPA_PLUS_INF])
+            )
+        elif (a.isZero()):
+            if (a.isNegative()):
+                return to_format(_z3_op_to_fpa_pretty_str[Z3_OP_FPA_MINUS_ZERO])
             else:
-                _z3_assert(z3.is_fp_value(a), 'expecting FP num ast')
-                r = []
-                sgn = (ctypes.c_int)(0)
-                sgnb = Z3_fpa_get_numeral_sign(a.ctx_ref(), a.ast, byref(sgn))
-                exp = Z3_fpa_get_numeral_exponent_string(a.ctx_ref(), a.ast, False)
-                sig = Z3_fpa_get_numeral_significand_string(a.ctx_ref(), a.ast)
-                if sgnb and sgn.value != 0:
-                    r.append(to_format('-'))
-                r.append(to_format(sig))
-                if (exp != '0'):
-                    r.append(to_format('*(2**'))
-                    r.append(to_format(exp))
-                    r.append(to_format(')'))                
-                return compose(r)
+                return to_format(_z3_op_to_fpa_pretty_str[Z3_OP_FPA_PLUS_ZERO])
+        else:
+            _z3_assert(z3.is_fp_value(a), 'expecting FP num ast')
+            r = []
+            sgn = (ctypes.c_int)(0)
+            sgnb = Z3_fpa_get_numeral_sign(a.ctx_ref(), a.ast, byref(sgn))
+            exp = Z3_fpa_get_numeral_exponent_string(a.ctx_ref(), a.ast, False)
+            sig = Z3_fpa_get_numeral_significand_string(a.ctx_ref(), a.ast)
+            if sgnb and sgn.value != 0:
+                r.append(to_format('-'))
+            r.append(to_format(sig))
+            if (exp != '0'):
+                r.extend((to_format('*(2**'), to_format(exp), to_format(')')))
+            return compose(r)
 
 
     def pp_fp(self, a, d, xs):
@@ -678,14 +660,12 @@ class Formatter:
         n = a.num_args()
 
         if self.fpa_pretty:
-            if self.is_infix(k) and n >= 3:            
+            if self.is_infix(k) and n >= 3:    
                 rm = a.arg(0)
                 if z3.is_fprm_value(rm) and z3.get_default_rounding_mode(a.ctx).eq(rm):
                     arg1 = to_format(self.pp_expr(a.arg(1), d+1, xs))
                     arg2 = to_format(self.pp_expr(a.arg(2), d+1, xs))
-                    r = []
-                    r.append(arg1)
-                    r.append(to_format(' '))
+                    r = [arg1, to_format(' ')]
                     r.append(to_format(op))
                     r.append(to_format(' '))
                     r.append(arg2)
@@ -695,22 +675,21 @@ class Formatter:
 
         if k in _z3_op_to_fpa_normal_str:
             op = _z3_op_to_fpa_normal_str[k]
-        
-        r = []        
+
+        r = []
         r.append(to_format(op))
-        if not z3.is_const(a):
-            r.append(to_format('('))                        
-            first = True
-            for c in a.children():                
-                if first:
-                    first = False
-                else:
-                    r.append(to_format(', '))
-                r.append(self.pp_expr(c, d+1, xs))
-            r.append(to_format(')'))
-            return compose(r)
-        else:
+        if z3.is_const(a):
             return to_format(a.as_string())
+        r.append(to_format('('))
+        first = True
+        for c in a.children():                
+            if first:
+                first = False
+            else:
+                r.append(to_format(', '))
+            r.append(self.pp_expr(c, d+1, xs))
+        r.append(to_format(')'))
+        return compose(r)
 
     def pp_prefix(self, a, d, xs):
         r  = []
@@ -774,7 +753,7 @@ class Formatter:
         else:
             op = self.pp_name(a)
             sz = _len(op)
-            op.string = ' ' + op.string
+            op.string = f' {op.string}'
             op.size   = sz + 1
             return group(seq(self.infix_args(a, d, xs), op))
 
@@ -782,10 +761,8 @@ class Formatter:
         k  = a.decl().kind()
         p  = self.get_precedence(k)
         child    = a.children()[0]
-        child_k  = None
-        if z3.is_app(child):
-            child_k = child.decl().kind()
-        child_pp = self.pp_expr(child, d+1, xs)        
+        child_k = child.decl().kind() if z3.is_app(child) else None
+        child_pp = self.pp_expr(child, d+1, xs)
         if k != child_k and self.is_infix_unary(child_k):
             child_p = self.get_precedence(child_k)
             if p <= child_p:
@@ -797,9 +774,7 @@ class Formatter:
 
     def pp_power_arg(self, arg, d, xs):
         r = self.pp_expr(arg, d+1, xs)
-        k = None
-        if z3.is_app(arg):
-            k = arg.decl().kind()
+        k = arg.decl().kind() if z3.is_app(arg) else None
         if self.is_infix_unary(k) or (z3.is_rational_value(arg) and arg.denominator_as_long() != 1):
             return self.add_paren(r)
         else:
@@ -814,22 +789,20 @@ class Formatter:
         return to_format("!=")
 
     def pp_distinct(self, a, d, xs):
-        if a.num_args() == 2:
-            op = self.pp_neq()
-            sz = _len(op)
-            op.string = ' ' + op.string
-            op.size   = sz + 1
-            return group(seq(self.infix_args(a, d, xs), op))
-        else:
+        if a.num_args() != 2:
             return self.pp_prefix(a, d, xs)
+        op = self.pp_neq()
+        sz = _len(op)
+        op.string = f' {op.string}'
+        op.size   = sz + 1
+        return group(seq(self.infix_args(a, d, xs), op))
 
     def pp_select(self, a, d, xs):
         if a.num_args() != 2:
             return self.pp_prefix(a, d, xs)
-        else:
-            arg1_pp = self.pp_expr(a.arg(0), d+1, xs)
-            arg2_pp = self.pp_expr(a.arg(1), d+1, xs)
-            return compose(arg1_pp, indent(2, compose(to_format('['), arg2_pp, to_format(']'))))
+        arg1_pp = self.pp_expr(a.arg(0), d+1, xs)
+        arg2_pp = self.pp_expr(a.arg(1), d+1, xs)
+        return compose(arg1_pp, indent(2, compose(to_format('['), arg2_pp, to_format(']'))))
 
     def pp_unary_param(self, a, d, xs):
         p   = Z3_get_decl_int_parameter(a.ctx_ref(), a.decl().ast, 0)
@@ -857,9 +830,8 @@ class Formatter:
         return self.pp_fdecl(f, a, d, xs)
 
     def pp_fdecl(self, f, a, d, xs):
-        r  = []
         sz = 0
-        r.append(to_format(f.name()))
+        r = [to_format(f.name())]
         for child in a.children(): 
             r.append(self.pp_expr(child, d+1, xs))
             sz = sz + 1
@@ -890,7 +862,7 @@ class Formatter:
         elif z3.is_rational_value(a):
             return self.pp_rational(a)
         elif z3.is_algebraic_value(a):
-            return self.pp_algebraic(a)        
+            return self.pp_algebraic(a)
         elif z3.is_bv_value(a):
             return self.pp_bv(a)
         elif z3.is_finite_domain_value(a):
@@ -914,7 +886,7 @@ class Formatter:
                 return self.pp_distinct(a, d, xs)
             elif k == Z3_OP_SELECT:
                 return self.pp_select(a, d, xs)
-            elif k == Z3_OP_SIGN_EXT or k == Z3_OP_ZERO_EXT or k == Z3_OP_REPEAT:
+            elif k in [Z3_OP_SIGN_EXT, Z3_OP_ZERO_EXT, Z3_OP_REPEAT]:
                 return self.pp_unary_param(a, d, xs)
             elif k == Z3_OP_EXTRACT:
                 return self.pp_extract(a, d, xs)
@@ -953,14 +925,8 @@ class Formatter:
         ys = [ to_format(a.var_name(i)) for i in range(a.num_vars()) ]
         new_xs  = xs + ys
         body_pp = self.pp_expr(a.body(), d+1, new_xs)
-        if len(ys) == 1:
-            ys_pp = ys[0]
-        else:
-            ys_pp   = seq3(ys, '[', ']')
-        if a.is_forall():
-            header = 'ForAll'
-        else:
-            header = 'Exists'
+        ys_pp = ys[0] if len(ys) == 1 else seq3(ys, '[', ']')
+        header = 'ForAll' if a.is_forall() else 'Exists'
         return seq1(header, (ys_pp, body_pp))
 
     def pp_expr(self, a, d, xs):
@@ -978,10 +944,10 @@ class Formatter:
 
     def pp_decl(self, f):
         k = f.kind()
-        if k == Z3_OP_DT_IS or k == Z3_OP_ARRAY_MAP:
-           g  = f.params()[0]
-           r = [ to_format(g.name()) ]
-           return seq1(self.pp_name(f), r)
+        if k in [Z3_OP_DT_IS, Z3_OP_ARRAY_MAP]:
+            g  = f.params()[0]
+            r = [ to_format(g.name()) ]
+            return seq1(self.pp_name(f), r)
         return self.pp_name(f)        
 
     def pp_seq_core(self, f, a, d, xs):
@@ -1024,13 +990,11 @@ class Formatter:
     def pp_func_entry(self, e):
         num = e.num_args()
         if num > 1:
-            args = []
-            for i in range(num):
-                args.append(self.pp_expr(e.arg_value(i), 0, []))
+            args = [self.pp_expr(e.arg_value(i), 0, []) for i in range(num)]
             args_pp = group(seq3(args))
         else:
             args_pp   = self.pp_expr(e.arg_value(0), 0, [])
-        value_pp = self.pp_expr(e.value(), 0, []) 
+        value_pp = self.pp_expr(e.value(), 0, [])
         return group(seq((args_pp, value_pp), self.pp_arrow()))
 
     def pp_func_interp(self, f):
@@ -1045,7 +1009,7 @@ class Formatter:
                 break
         if sz <= self.max_args:
             else_val = f.else_value()
-            if else_val == None:
+            if else_val is None:
                 else_pp  = to_format('#unspecified')
             else:
                 else_pp  = self.pp_expr(else_val, 0, [])
@@ -1064,10 +1028,7 @@ class Formatter:
             if sz > self.max_args:
                 r.append(self.pp_ellipses())
                 break
-        if isinstance(a, tuple):
-            return seq3(r)
-        else:
-            return seq3(r, '[', ']')
+        return seq3(r) if isinstance(a, tuple) else seq3(r, '[', ']')
 
     def main(self, a):
         if z3.is_expr(a):
@@ -1076,7 +1037,7 @@ class Formatter:
             return self.pp_sort(a)
         elif z3.is_func_decl(a):
             return self.pp_decl(a)
-        elif isinstance(a, z3.Goal) or isinstance(a, z3.AstVector):
+        elif isinstance(a, (z3.Goal, z3.AstVector)):
             return self.pp_seq(a, 0, [])
         elif isinstance(a, z3.Solver):
             return self.pp_seq(a.assertions(), 0, [])
@@ -1090,7 +1051,7 @@ class Formatter:
             return self.pp_model(a)
         elif isinstance(a, z3.FuncInterp):
             return self.pp_func_interp(a)
-        elif isinstance(a, list) or isinstance(a, tuple):
+        elif isinstance(a, (list, tuple)):
             return self.pp_list(a)
         else:
             return to_format(self.pp_unknown())
@@ -1113,18 +1074,17 @@ class HTMLFormatter(Formatter):
         
     def pp_name(self, a):
         r = _html_op_name(a)
-        if r[0] == '&' or r[0] == '/' or r[0] == '%':
+        if r[0] in ['&', '/', '%']:
             return to_format(r, 1)
-        else:
-            pos = r.find('__')
-            if pos == -1 or pos == 0:
-                return to_format(r)
-            else:
-                sz = len(r)
-                if pos + 2 == sz:
-                    return to_format(r)
-                else:
-                    return to_format('%s<sub>%s</sub>' % (r[0:pos], r[pos+2:sz]), sz - 2)
+        pos = r.find('__')
+        if pos in [-1, 0]:
+            return to_format(r)
+        sz = len(r)
+        return (
+            to_format(r)
+            if pos + 2 == sz
+            else to_format(f'{r[:pos]}<sub>{r[pos + 2:sz]}</sub>', sz - 2)
+        )
 
     def is_assoc(self, k):
         return _is_html_assoc(k)
@@ -1154,7 +1114,7 @@ class HTMLFormatter(Formatter):
         sz  = len(xs)
         if idx >= sz:
             # 957 is the greek letter nu
-            return to_format('&#957;<sub>%s</sub>' % idx, 1)
+            return to_format(f'&#957;<sub>{idx}</sub>', 1)
         else:
             return to_format(xs[sz - idx - 1])
 
@@ -1163,10 +1123,7 @@ class HTMLFormatter(Formatter):
         new_xs  = xs + ys
         body_pp = self.pp_expr(a.body(), d+1, new_xs)
         ys_pp = group(seq(ys))
-        if a.is_forall():
-            header = '&forall;'
-        else:
-            header = '&exist;'
+        header = '&forall;' if a.is_forall() else '&exist;'
         return group(compose(to_format(header, 1), 
                              indent(1, compose(ys_pp, to_format(' :'), line_break(), body_pp))))
 
@@ -1208,10 +1165,7 @@ _html_out = None
 
 def set_html_mode(flag=True):
     global _Formatter
-    if flag:
-        _Formatter = HTMLFormatter()
-    else:
-        _Formatter = Formatter()
+    _Formatter = HTMLFormatter() if flag else Formatter()
 
 def set_fpa_pretty(flag=True):
     global _Formatter
@@ -1244,16 +1198,16 @@ def pp(a):
         print(a)
 
 def print_matrix(m):
-    _z3_assert(isinstance(m, list) or isinstance(m, tuple), "matrix expected")
+    _z3_assert(isinstance(m, (list, tuple)), "matrix expected")
     if not in_html_mode():
         print(obj_to_string(m))
     else:
         print('<table cellpadding="2", cellspacing="0", border="1">')
         for r in m:
-            _z3_assert(isinstance(r, list) or isinstance(r, tuple), "matrix expected")
+            _z3_assert(isinstance(r, (list, tuple)), "matrix expected")
             print('<tr>')
             for c in r:
-                print('<td>%s</td>' % c)
+                print(f'<td>{c}</td>')
             print('</tr>')
         print('</table>')
     

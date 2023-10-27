@@ -13,10 +13,7 @@ from fractions import Fraction
 from .z3 import _get_ctx
 
 def _to_numeral(num, ctx=None):
-    if isinstance(num, Numeral):
-        return num
-    else:
-        return Numeral(num, ctx)
+    return num if isinstance(num, Numeral) else Numeral(num, ctx)
 
 class Numeral:
     """
@@ -89,7 +86,7 @@ class Numeral:
         if isinstance(num, Ast):
             self.ast  = num
             self.ctx  = _get_ctx(ctx)
-        elif isinstance(num, RatNumRef) or isinstance(num, AlgebraicNumRef):
+        elif isinstance(num, (RatNumRef, AlgebraicNumRef)):
             self.ast = num.ast
             self.ctx = num.ctx
         elif isinstance(num, ArithRef):
